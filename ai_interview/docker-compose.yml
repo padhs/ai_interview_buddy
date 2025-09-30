@@ -1,0 +1,53 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.front
+    container_name: ai_interview_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+    depends_on:
+      - db
+    networks:
+      - ai_interview_network
+    restart: unless-stopped
+  
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.back
+    container_name: ai_interview_backend
+    ports:
+      - "8080:8080"
+    environment:
+      - GO_ENV=development
+    depends_on:
+      - db
+    networks:
+      - ai_interview_network
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    container_name: ai_interview_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ai_interview
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+    networks:
+      - ai_interview_network
+    restart: unless-stopped
+
+networks:
+  ai_interview_network: {}
+    
