@@ -1,4 +1,15 @@
+x-logging:
+  &default-logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 100M
+
 services:
+# ----------------------
+# frontend Services
+# ----------------------
+
   frontend:
     build:
       context: ./frontend
@@ -18,10 +29,14 @@ services:
       - ai_interview_network
     restart: unless-stopped
   
+  # ----------------------
+  # backend Services
+  # ----------------------
+
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.back
+      dockerfile: Dockerfile.server
     container_name: ai_interview_backend
     ports:
       - "8080:8080"
@@ -32,14 +47,18 @@ services:
     networks:
       - ai_interview_network
     restart: unless-stopped
+  
+  # ----------------------
+  # db Services
+  # ----------------------
 
   db:
     image: postgres:16
     container_name: ai_interview_db
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=ai_interview
+    environment: # env variables from .env file
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -47,7 +66,28 @@ services:
     networks:
       - ai_interview_network
     restart: unless-stopped
+  
+  # pgadmin:
+  #   image: dpage/pgadmin4:8
+  #   container_name: ai_interview_pgadmin
+  #   restart: unless-stopped
+  #   environment: # env variables from .env file
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL} 
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+  #   ports:
+  #     - "5050:80"
+  #   depends_on:
+  #     - db
+  #   volumes:
+  #     - ./pgadmin/data:/var/lib/pgadmin
+  #   networks:
+  #     - ai_interview_network
+    
+
 
 networks:
   ai_interview_network: {}
-    
+  
+volumes:
+  data:
+  pgadmin_data:

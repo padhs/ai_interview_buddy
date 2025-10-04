@@ -42,7 +42,6 @@ yarn-error.log*
 frontend/next-env.d.ts
 
 # Go backend
-backend/server
 backend/bin/
 backend/*.exe
 backend/*.exe~
@@ -81,3 +80,4 @@ logs/
 .env.development.local
 .env.test.local
 .env.production.local
+venv/
