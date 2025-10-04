@@ -62,7 +62,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db/data:/var/lib/postgresql/data
+      - ./db/pgdata:/var/lib/postgresql/data
+      - ./db/migrations/init:/docker-entrypoint-initdb.d:ro
     networks:
       - ai_interview_network
     restart: unless-stopped
@@ -83,10 +84,9 @@ services:
   #   networks:
   #     - ai_interview_network
     
-
+  
+volumes:
+  pgdata:
 
 networks:
   ai_interview_network: {}
-  
-volumes:
-  data:

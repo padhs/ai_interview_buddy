@@ -52,7 +52,8 @@ backend/vendor/
 backend/coverage.out
 
 # Database
-db/data/
+db/pgdata/
+db/data
 *.db
 *.sqlite
 *.sqlite3
@@ -80,4 +81,4 @@ logs/
 .env.development.local
 .env.test.local
 .env.production.local
-venv/
+.venv/
