@@ -54,6 +54,7 @@ backend/coverage.out
 # Database
 db/pgdata/
 db/data
+db/pgadmin/
 *.db
 *.sqlite
 *.sqlite3

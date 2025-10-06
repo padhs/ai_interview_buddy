@@ -1,9 +1,4 @@
-x-logging:
-  &default-logging
-  logging:
-    driver: json-file
-    options:
-      max-size: 100M
+
 
 services:
 # ----------------------
@@ -68,21 +63,25 @@ services:
       - ai_interview_network
     restart: unless-stopped
   
-  # pgadmin:
-  #   image: dpage/pgadmin4:8
-  #   container_name: ai_interview_pgadmin
-  #   restart: unless-stopped
-  #   environment: # env variables from .env file
-  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL} 
-  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
-  #   ports:
-  #     - "5050:80"
-  #   depends_on:
-  #     - db
-  #   volumes:
-  #     - ./pgadmin/data:/var/lib/pgadmin
-  #   networks:
-  #     - ai_interview_network
+  # ----------------------
+  # pgadmin Services (GUI)
+  # ----------------------
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: ai_interview_pgadmin
+    restart: unless-stopped
+    environment: # env variables from .env file
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL} 
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - ./db/pgadmin/data:/var/lib/pgadmin
+    networks:
+      - ai_interview_network
     
   
 volumes:
