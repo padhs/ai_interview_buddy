@@ -3,7 +3,7 @@ import pandas as pd
 import re
 
 # Load the CSV
-in_path = "ai_interview/db/questions/leetcode_problems.csv"
+in_path = "ai_interview/db/questions/leetcode_problems_merged.csv"
 df = pd.read_csv(in_path)
 
 # --- Helper: Fix malformed exponents ---
@@ -105,7 +105,7 @@ if "id" in df_out.columns:
     df_out = df_out.drop_duplicates(subset=["id"]).reset_index(drop=True)
 
 # Save cleaned CSV
-out_path = "ai_interview/db/questions/leetcode_dataset_cleaned_split_null_handled_removed_cols.csv"
+out_path = "ai_interview/db/questions/leetcode_dataset_cleaned_split_null_handled_removed_cols_v2.csv"
 df_out.to_csv(out_path, index=False)
 
 print("✅ Saved cleaned & split dataset to:", out_path)

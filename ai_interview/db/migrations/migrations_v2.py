@@ -8,7 +8,7 @@ from dotenv import dotenv_values
 # --- Load environment variables ---
 config = dotenv_values('ai_interview/.env')
 
-csv_path = config.get('CSV_PATH', 'ai_interview/db/questions/leetcode_dataset_cleaned_split_null_handled_removed_cols.csv')
+csv_path = config.get('CSV_PATH', 'ai_interview/db/questions/leetcode_dataset_cleaned_split_null_handled_removed_cols_v2.csv')
 pg_host = config.get('PG_HOST', 'localhost')
 pg_port = config.get('PG_PORT', '5432')
 pg_user = config.get('POSTGRES_USER', 'postgres')
@@ -64,6 +64,14 @@ def main():
     inserted = 0
 
     try:
+        # Truncate table --- (inserting new data)
+        print("👍 Truncating tables...")
+        cur.execute("""
+            TRUNCATE TABLE problems, companies, problem_companies, topics, problem_topics, similar_questions
+            RESTART IDENTITY CASCADE;
+        """)
+        conn.commit() # commit the truncate operation (removes all records from the tables quickly)
+        print("⏳ Rows cleared. Tables truncated. Starting fresh migration...")
         for _, row in df.iterrows():
             # --- Insert problem ---
             cur.execute("""
