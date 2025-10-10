@@ -32,7 +32,7 @@ def to_list_field(s):
 
 def difficulty_enum(x):
     x = norm_str(x).lower()
-    return x if x in ('easy', 'medium', 'hard') else 'easy'
+    return x if x in ('easy', 'medium', 'hard') else 'medium'
 
 
 def upsert_and_get_id(cur, table, name):
