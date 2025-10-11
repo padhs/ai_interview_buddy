@@ -2,22 +2,30 @@ package data
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/padhs/ai_interview_buddy/backend/internal/types"
-
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/padhs/ai_interview_buddy/backend/internal/types"
 )
+
+// ---------------- types ----------------
 
 type ProblemsRepo struct {
 	pool *pgxpool.Pool
 }
 
+// ---------------- function prototypes (constructors) ----------------
+
 func NewProblemsRepo(pool *pgxpool.Pool) *ProblemsRepo {
 	return &ProblemsRepo{pool: pool}
 }
 
+// ---------------- handlers ----------------
+
+// GET /api/v1/problems?limit=&offset=&difficulty=&tag=&q=
 func (r *ProblemsRepo) List(ctx context.Context, q, difficulty, tag string, limit, offset, page, pageSize int) ([]types.ProblemItem, error) {
 	sql, args := buildProblemsListSQL(q, difficulty, tag, limit, offset)
 	rows, err := r.pool.Query(ctx, sql, args...)
@@ -29,7 +37,11 @@ func (r *ProblemsRepo) List(ctx context.Context, q, difficulty, tag string, limi
 	out := make([]types.ProblemItem, 0, limit)
 	for rows.Next() {
 		var it types.ProblemItem
-		if err := rows.Scan(&it.ID, &it.Title, &it.Difficulty, &it.URL); err != nil {
+		if err := rows.Scan(
+			&it.ID,
+			&it.Title,
+			&it.Difficulty,
+			&it.URL); err != nil {
 			return nil, err
 		}
 		out = append(out, it)
@@ -37,6 +49,7 @@ func (r *ProblemsRepo) List(ctx context.Context, q, difficulty, tag string, limi
 	return out, rows.Err()
 }
 
+// GET /api/v1/problems?limit=&offset=&difficulty=&tag=&q=
 func (r *ProblemsRepo) Count(ctx context.Context, q, difficulty, tag string) (int64, error) {
 	sql, args := buildProblemsCountSQL(q, difficulty, tag)
 	var total int64
@@ -99,4 +112,75 @@ func buildWhere(q, difficulty, tag string) (string, []any) {
 		return "", nil
 	}
 	return strings.Join(clauses, " AND "), args
+}
+
+// GET /api/v1/problems/{id}
+func (r *ProblemsRepo) GetProblemByID(ctx context.Context, id int) (*types.ProblemDetails, error) {
+	const query = `
+		SELECT id, title, difficulty, url, description, question, examples, constraints, follow_up, likes
+		FROM problems
+		WHERE id = $1;
+	`
+	var problem types.ProblemDetails
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&problem.ID,
+		&problem.Title,
+		&problem.Difficulty,
+		&problem.URL,
+		&problem.Description,
+		&problem.Question,
+		&problem.Examples,
+		&problem.Constraints,
+		&problem.FollowUp,
+		&problem.Likes,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &problem, nil
+}
+
+// GET /api/v1/problems/random?difficulty={difficulty}&tag={tag}
+func (r *ProblemsRepo) GetRandomProblem(ctx context.Context, difficulty *types.Difficulty) (*types.RandomProblem, error) {
+	// For now, only filter by difficulty since tags column doesn't exist in problems table
+	// TODO: Implement proper tag filtering by joining with problem_topics table
+	var query string
+	var args []interface{}
+
+	if difficulty != nil && *difficulty != "" {
+		query = `
+			SELECT id, title, difficulty, description
+			FROM problems
+			WHERE difficulty = $1::difficulty_enum
+			ORDER BY random()
+			LIMIT 1;
+		`
+		args = []interface{}{*difficulty}
+	} else {
+		query = `
+			SELECT id, title, difficulty, description
+			FROM problems
+			ORDER BY random()
+			LIMIT 1;
+		`
+		args = []interface{}{}
+	}
+
+	var problem types.RandomProblem
+
+	err := r.pool.QueryRow(ctx, query, args...).Scan(
+		&problem.ID,
+		&problem.Title,
+		&problem.Difficulty,
+		&problem.Description,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("no problem was found for given filter(s)")
+		}
+		return nil, err
+	}
+
+	return &problem, nil
 }
