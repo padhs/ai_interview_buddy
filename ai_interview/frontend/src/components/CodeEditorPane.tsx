@@ -112,7 +112,8 @@ export default function CodeEditorPane() {
                 id="language-select"
                 value={selectedLanguage}
                 onChange={(e) => handleLanguageChange(e.target.value)}
-                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 
+                            text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {languages.map((lang) => (
                   <option key={lang.value} value={lang.value}>
@@ -127,7 +128,8 @@ export default function CodeEditorPane() {
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed rounded-md transition-colors duration-200 flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 
+              disabled:bg-green-400 disabled:cursor-not-allowed rounded-md transition-colors duration-200 flex items-center gap-2"
             >
               {isRunning ? (
                 <>
@@ -147,7 +149,8 @@ export default function CodeEditorPane() {
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-md transition-colors duration-200 flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 
+              disabled:cursor-not-allowed rounded-md transition-colors duration-200 flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>
