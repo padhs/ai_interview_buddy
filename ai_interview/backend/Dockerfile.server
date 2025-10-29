@@ -18,6 +18,10 @@ RUN go build -o server ./cmd/server/
 # Stage 2: Runtime
 FROM debian:bookworm-slim
 
+# Install ca-certificates for https requests 
+RUN apt update && apt install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy the binary from the builder stage

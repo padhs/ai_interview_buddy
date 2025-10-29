@@ -83,9 +83,19 @@ services:
     networks:
       - ai_interview_network
     
-  
+# ----------------------
+# shared persisted volumes
+# ----------------------
+
 volumes:
   pgdata:
 
+# ------------------------
+# shared networks between containers
+# ------------------------
+
 networks:
-  ai_interview_network: {}
+  ai_interview_network:
+    name: ai_interview_network
+    driver: bridge
+    external: true

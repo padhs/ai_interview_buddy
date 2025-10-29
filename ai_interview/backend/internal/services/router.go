@@ -50,6 +50,13 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	//problems/{id}
 	r.Get("/api/v1/problems/{id}", handlers.NewGetProblemDetailsByIDHandler(pool).GetProblemByIDHandler)
 
+	//---------- judge0 code execution route ------------
+	// POST /api/v1/execute
+	r.Post("/api/v1/execute", handlers.Judge0CodeExecution)
+
+	// ---------- get code runID route ------------
+	// GET /api/v1/execute/{runID}
+	r.Get("/api/v1/execute/{runID}", handlers.ExecutedCodeHandler)
 	return r
 }
 

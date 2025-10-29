@@ -89,3 +89,55 @@ type RandomProblem struct {
 	Description		sql.NullString 		`json:"description" db:"description"`
 }
 
+
+
+// ---------------- monaco editor ---------------- (app layer -> judge0 layer)
+// POST /api/v1/execute
+
+// request from monaco editor (client -> server)
+type ExecuteRequest struct {
+	LanguageID int `json:"language_id"`
+	SourceCode string `json:"source_code"`
+	Stdin string `json:"stdin"`
+	ProblemID int `json:"problem_id"`
+}
+
+// response from monaco editor (server -> client)
+type ExecuteResponse struct {
+	RunID string `json:"runID"`
+	Status string `json:"status"`
+	StatusCode int `json:"status_code"`
+	
+}
+
+// judge0 submission payload (client -> judge0)
+// type Judge0SubmissionPayload struct {
+// 	LanguageID int `json:"language_id"`
+// 	SourceCode string `json:"source_code"`
+// 	Stdin string `json:"stdin"`
+// }
+
+// judge0 code execution result (judge0 -> backend)
+type Judge0CodeExecutionResult struct {
+	Status  string   `json:"status"`           // e.g., "In Queue", "Processing", "Accepted", etc.
+	Time    string   `json:"time,omitempty"`   // seconds as string per Judge0
+	Memory  int      `json:"memory,omitempty"` // kilobytes
+	Stdout  string   `json:"stdout,omitempty"`
+	Stderr  string   `json:"stderr,omitempty"`
+	Compile string   `json:"compile_output,omitempty"`
+	// TestcaseResults can be added later if you run multiple testcases server-side.
+	// TestcaseResults []TestcaseResult `json:"testcaseResults,omitempty"`
+}
+
+// subset of judge0 fields to return to client 
+type Judge0GetResp struct {
+	Stdout        *string `json:"stdout"`
+	Stderr        *string `json:"stderr"`
+	CompileOutput *string `json:"compile_output"`
+	Time          *string `json:"time"`
+	Memory        *int    `json:"memory"`
+	Status        struct {
+		ID          int    `json:"id"`
+		Description string `json:"description"`
+	} `json:"status"`
+}
