@@ -1,4 +1,4 @@
-import { RandomProblemResponse } from '../../types/problem';
+import { RandomProblemResponse } from '../../types/types';
 
 // Use environment variable or fallback to localhost
 const API_BASE_URL = 'http://localhost:8080/api/v1';

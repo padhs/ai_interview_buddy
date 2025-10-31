@@ -2,12 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { fetchRandomProblem } from '../services/api';
-import { parseProblem, ParsedProblem } from '../utils/ParseProblem';
+import { parseProblem } from '../utils/ParseProblem';
+import { ParsedProblem } from '../../types/types';
+import { useSession } from './SessionProvider';
+import { useRouter } from 'next/navigation';
 
-export default function ProblemPane() {
+type ProblemPaneProps = {
+  onProblemLoaded?: (problemId: number) => void;
+};
+
+export default function ProblemPane({ onProblemLoaded }: ProblemPaneProps = {}) {
   const [problem, setProblem] = useState<ParsedProblem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { session, resetSession } = useSession();
+  const router = useRouter();
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     const loadProblem = async () => {
@@ -18,6 +28,9 @@ export default function ProblemPane() {
         const response = await fetchRandomProblem();
         const parsedProblem = parseProblem(response);
         setProblem(parsedProblem);
+        if (onProblemLoaded) {
+          onProblemLoaded(parsedProblem.id);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load problem');
         console.error('Error loading problem:', err);
@@ -27,7 +40,41 @@ export default function ProblemPane() {
     };
 
     loadProblem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!session?.expiresAt) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const remaining = session.expiresAt - Date.now();
+      if (remaining <= 0) {
+        setTimeRemaining(0);
+        // Session expired - invalidate and redirect to stats
+        fetch(`/api/v1/interviews/${session.sessionId}`, { method: 'DELETE' }).finally(() => {
+          resetSession();
+          router.push('/stats');
+        });
+        return;
+      }
+      setTimeRemaining(remaining);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [session?.expiresAt, session?.sessionId, resetSession, router]);
+
+  const formatTime = (ms: number): string => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
 
   if (loading) {
     return (
@@ -121,13 +168,30 @@ export default function ProblemPane() {
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">
       {/* Top Section - ID, Title, Difficulty */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Problem {id}
-          </span>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(difficulty)}`}>
-            {formatDifficulty(difficulty)}
-          </span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              Problem {id}
+            </span>
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(difficulty)}`}>
+              {formatDifficulty(difficulty)}
+            </span>
+          </div>
+          {/* Countdown Timer */}
+          {timeRemaining !== null && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-sm font-semibold ${
+              timeRemaining < 300000 // Less than 5 minutes
+                ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
+                : timeRemaining < 900000 // Less than 15 minutes
+                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
+                : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+            }`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{formatTime(timeRemaining)}</span>
+            </div>
+          )}
         </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           {title}
@@ -152,7 +216,7 @@ export default function ProblemPane() {
             Examples
           </h2>
           <div className="space-y-4">
-            {examples.map((example, index) => (
+            {examples.map((example: { input: string; output: string; explanation?: string }, index: number) => (
               <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                 <div className="mb-2">
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -198,7 +262,7 @@ export default function ProblemPane() {
             Constraints
           </h2>
           <ul className="space-y-2">
-            {constraints.map((constraint, index) => (
+            {constraints.map((constraint: string, index: number) => (
               <li key={index} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
                 <span className="text-gray-400 dark:text-gray-500 mt-1">•</span>
                 <span className="text-sm">{constraint}</span>

@@ -1,20 +1,6 @@
 // parse api response and segregate into id, title, difficulty, description, examples, constraints, followup
 
-import { RandomProblemResponse } from '../../types/problem';
-
-export interface ParsedProblem {
-  id: number;
-  title: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  description: string;
-  examples: Array<{
-    input: string;
-    output: string;
-    explanation?: string;
-  }>;
-  constraints: string[];
-  followUp?: string;
-}
+import { RandomProblemResponse, ParsedProblem } from '../../types/types';
 
 export function parseProblem(raw: RandomProblemResponse): ParsedProblem {
     const text = raw.description?.String || "";

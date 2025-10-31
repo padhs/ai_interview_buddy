@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/padhs/ai_interview_buddy/backend/internal/types"
 )
 
 func ExecutedCodeHandler(w http.ResponseWriter, r *http.Request) {
@@ -19,6 +20,14 @@ func ExecutedCodeHandler(w http.ResponseWriter, r *http.Request) {
 	runID := chi.URLParam(r, "runID")
 	if runID == "" {
 		http.Error(w, "missing runID in path", http.StatusBadRequest)
+		return
+	}
+
+	// Check if we already have the result cached to avoid duplicate Judge0 calls
+	if cachedResult, ok := getRunResult(runID); ok {
+		// Return cached result
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(cachedResult)
 		return
 	}
 
@@ -58,14 +67,7 @@ func ExecutedCodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var result struct {
-		Stdout        *string        `json:"stdout"`
-		Stderr        *string        `json:"stderr"`
-		CompileOutput *string        `json:"compile_output"`
-		Time          *string        `json:"time"`
-		Memory        *int           `json:"memory"`
-		Status        map[string]any `json:"status"`
-	}
+	var result types.Judge0GetResp
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		http.Error(w, "invalid JSON from Judge0: "+err.Error(), http.StatusBadGateway)
 		return
@@ -88,6 +90,9 @@ func ExecutedCodeHandler(w http.ResponseWriter, r *http.Request) {
 	result.Stdout = decode(result.Stdout)
 	result.Stderr = decode(result.Stderr)
 	result.CompileOutput = decode(result.CompileOutput)
+
+	// Cache the result to avoid duplicate calls for the same runID
+	setRunResult(runID, &result)
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(result)

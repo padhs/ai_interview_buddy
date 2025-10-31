@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/padhs/ai_interview_buddy/backend/internal/services/handlers"
+	"github.com/padhs/ai_interview_buddy/backend/internal/services/vision"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -57,6 +58,35 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 	// ---------- get code runID route ------------
 	// GET /api/v1/execute/{runID}
 	r.Get("/api/v1/execute/{runID}", handlers.ExecutedCodeHandler)
+
+	// ---------- SSE events for execution -----------
+	// GET /api/v1/execute/{runID}/events
+	r.Get("/api/v1/execute/{runID}/events", handlers.ExecutionEvents)
+
+	// ---------- Interview sessions -----------
+	// POST /api/v1/interviews
+	r.Post("/api/v1/interviews", handlers.CreateInterview)
+	// POST /api/v1/interviews/{id}/end
+	r.Post("/api/v1/interviews/{id}/end", handlers.EndInterview)
+	// DELETE /api/v1/interviews/{id}
+	r.Delete("/api/v1/interviews/{id}", handlers.DeleteInterview)
+
+	// ---------- Stats -----------
+	// GET /api/v1/stats/session/{id}
+	r.Get("/api/v1/stats/session/{id}", handlers.GetSessionStats)
+
+	// ---------- Vision -----------
+	// POST /api/v1/vision/observe
+	r.Post("/api/v1/vision/observe", vision.ObserveHandler)
+
+	// ---------- Voice -----------
+	// POST /api/v1/voice/ingest (Google STT - kept for fallback if needed)
+	r.Post("/api/v1/voice/ingest", handlers.VoiceIngest)
+	// POST /api/v1/voice/tts (TTS proxy)
+	r.Post("/api/v1/voice/tts", handlers.VoiceTTS)
+	// POST /api/v1/voice/chat (Audio -> Gemini STT+processing -> ElevenLabs TTS -> audio/mpeg)
+	r.Post("/api/v1/voice/chat", handlers.VoiceChat)
+
 	return r
 }
 

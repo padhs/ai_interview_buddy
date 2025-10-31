@@ -15,9 +15,12 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      # Point Next.js proxy to the backend service when running in Docker
+      - NEXT_PUBLIC_BACKEND_ORIGIN=http://ai_interview_backend:8080
     command: npm run dev
     depends_on:
       - db
+      - backend
     networks:
       - ai_interview_network
     restart: unless-stopped
