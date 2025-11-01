@@ -6,7 +6,7 @@ import { useSession } from '@/components/SessionProvider';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useVisionObserve } from '../hooks/useVisionObserve';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 
 
 export default function InterviewPage() {
@@ -68,20 +68,6 @@ export default function InterviewPage() {
             scale: 0.5,
             backgroundColor: '#ffffff',
             logging: false,
-            onclone: (clonedDoc) => {
-              // Replace unsupported oklch() colors with compatible rgb/rgba
-              try {
-                const allElements = clonedDoc.querySelectorAll('*');
-                allElements.forEach((el) => {
-                  const htmlEl = el as HTMLElement;
-                  if (htmlEl.style && htmlEl.style.cssText) {
-                    htmlEl.style.cssText = htmlEl.style.cssText.replace(/oklch\([^)]+\)/g, '#9ca3af');
-                  }
-                });
-              } catch {
-                // Ignore errors during clone processing
-              }
-            },
           });
           const screenshotBase64 = canvas.toDataURL('image/webp', 0.8).split(',')[1];
           

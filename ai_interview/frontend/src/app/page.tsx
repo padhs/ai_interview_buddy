@@ -20,6 +20,7 @@ export default function Home() {
       }
       const data = await res.json();
       const interviewId: string = data.interviewId;
+      console.log('Created session with ID:', interviewId);
       // Backend returns expiresAt as RFC3339 string; parse it to timestamp
       const expiresAt = data.expiresAt ? new Date(data.expiresAt).getTime() : Date.now() + 60 * 60 * 1000;
       setSession({ sessionId: interviewId, expiresAt, runCount: 0 });

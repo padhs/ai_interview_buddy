@@ -7,9 +7,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/padhs/ai_interview_buddy/backend/internal/types"
@@ -125,7 +127,7 @@ func callGeminiInterviewer(
 
 func synthesizeSpeech(ctx context.Context, text string) (string, error) {
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
-	voiceID := os.Getenv("ELEVENLABS_VOICE_ID")
+	voiceID := strings.TrimSpace(os.Getenv("ELEVENLABS_VOICE_ID"))
 	if voiceID == "" {
 		voiceID = "Eric" // default
 	}
@@ -133,6 +135,9 @@ func synthesizeSpeech(ctx context.Context, text string) (string, error) {
 	if apiKey == "" {
 		return "", errors.New("missing ELEVENLABS_API_KEY")
 	}
+
+	// Log voice ID being used for debugging (remove in production if needed)
+	// fmt.Printf("[DEBUG] Using ElevenLabs voice ID: %s\n", voiceID)
 
 	body := map[string]interface{}{
 		"model_id": "eleven_multilingual_v2",
@@ -160,7 +165,7 @@ func synthesizeSpeech(ctx context.Context, text string) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
-		return "", errors.New("tts_failed: " + (string(b)))
+		return "", errors.New(fmt.Sprintf("tts_failed: %d - voice_id used: '%s' - %s", resp.StatusCode, voiceID, string(b)))
 	}
 
 	audioB64, _ := io.ReadAll(resp.Body)

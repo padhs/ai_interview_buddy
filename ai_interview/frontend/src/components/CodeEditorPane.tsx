@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { CodeEditorPaneProps } from '../../types/types';
 
 // Dynamically import Monaco Editor to avoid SSR issues
+// The @monaco-editor/react package handles loader configuration internally
 const Editor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">Loading editor...</div>

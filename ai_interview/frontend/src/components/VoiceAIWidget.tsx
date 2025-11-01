@@ -3,33 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './SessionProvider';
 import { VoiceAIWidgetProps } from '../../types/types';
-import html2canvas from 'html2canvas';
-
-// Load the Lottie web component only on client via CDN to avoid bundling issues
-let lottieLoading: Promise<void> | null = null;
-function ensureLottie(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve();
-  if (customElements && customElements.get && customElements.get('lottie-player')) {
-    return Promise.resolve();
-  }
-  if (lottieLoading) return lottieLoading;
-  lottieLoading = new Promise<void>((resolve) => {
-    const existing = document.querySelector('script[data-lottie-player]') as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js';
-    script.async = true;
-    script.defer = true;
-    script.dataset.lottiePlayer = 'true';
-    script.onload = () => resolve();
-    script.onerror = () => resolve();
-    document.head.appendChild(script);
-  });
-  return lottieLoading;
-}
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import html2canvas from 'html2canvas-pro';
 
 export default function VoiceAIWidget({ problemId = 0, language = '', lastRunStatus = '' }: VoiceAIWidgetProps = {}) {
   const [isAIPlaying, setIsAIPlaying] = useState(false);
@@ -45,9 +20,6 @@ export default function VoiceAIWidget({ problemId = 0, language = '', lastRunSta
   const { session } = useSession();
 
   useEffect(() => {
-    // Prepare lottie player custom element
-    ensureLottie();
-
     const onStart = () => setIsAIPlaying(true);
     const onStop = () => setIsAIPlaying(false);
 
@@ -85,38 +57,6 @@ export default function VoiceAIWidget({ problemId = 0, language = '', lastRunSta
                 scale: 0.5,
                 backgroundColor: '#ffffff',
                 logging: false,
-                onclone: (clonedDoc) => {
-                  // Replace unsupported oklch() colors with compatible rgb/rgba
-                  const styleSheets = clonedDoc.styleSheets;
-                  try {
-                    for (let i = 0; i < styleSheets.length; i++) {
-                      const sheet = styleSheets[i] as CSSStyleSheet;
-                      try {
-                        const rules = sheet.cssRules || sheet.rules;
-                        if (rules) {
-                          for (let j = 0; j < rules.length; j++) {
-                            const rule = rules[j] as CSSStyleRule;
-                            if (rule.style && rule.style.cssText) {
-                              rule.style.cssText = rule.style.cssText.replace(/oklch\([^)]+\)/g, '#9ca3af');
-                            }
-                          }
-                        }
-                      } catch {
-                        // CORS or other sheet access issues - ignore
-                      }
-                    }
-                  } catch {
-                    // Ignore stylesheet access errors
-                  }
-                  // Also replace in inline styles
-                  const allElements = clonedDoc.querySelectorAll('*');
-                  allElements.forEach((el) => {
-                    const htmlEl = el as HTMLElement;
-                    if (htmlEl.style && htmlEl.style.cssText) {
-                      htmlEl.style.cssText = htmlEl.style.cssText.replace(/oklch\([^)]+\)/g, '#9ca3af');
-                    }
-                  });
-                },
               });
               screenshotBase64 = canvas.toDataURL('image/webp', 0.8).split(',')[1];
             }
@@ -233,48 +173,35 @@ export default function VoiceAIWidget({ problemId = 0, language = '', lastRunSta
 
   useEffect(() => () => stopMic(), [stopMic]);
 
-  // Use the attached Lottie asset; encode spaces for a safe URL
-  const lottieVoiceSrc = useMemo(() => encodeURI('/lottiefiles/Voice recognition.lottie'), []);
-  const lottieSiriSrc = useMemo(() => encodeURI('/lottiefiles/loading siri.lottie'), []);
+  // Use the attached Lottie asset from public directory and CDN
+  // In Next.js, files in public/ are served from root, so files in public/ are accessible at /
+  const lottieVoiceSrc = useMemo(() => '/Voice%20recognition.lottie', []);
+  const lottieSiriSrc = useMemo(() => 'https://lottie.host/fa84e230-f250-4a92-ad0d-c98cb75f6083/pSVar1mB49.lottie', []);
 
+  const showAnimations = isAIPlaying || isRecording;
+  
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {/* Dual Lottie row */}
       <div className="flex items-center gap-2">
         {/* Left: loading siri */}
-        {isAIPlaying && (
+        {showAnimations && (
           <div className="w-28 h-28 pointer-events-none">
-            {(() => {
-              const Tag: string = 'lottie-player';
-              const props = {
-                autoplay: true,
-                loop: true,
-                mode: 'normal',
-                src: lottieSiriSrc,
-                style: { width: '112px', height: '112px' },
-              } as React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-                autoplay?: boolean; loop?: boolean; mode?: string; src?: string; style?: React.CSSProperties;
-              };
-              return React.createElement(Tag, props);
-            })()}
+            <DotLottieReact
+              src={lottieSiriSrc}
+              loop
+              autoplay
+            />
           </div>
         )}
         {/* Right: voice recognition */}
-        {isAIPlaying && (
+        {showAnimations && (
           <div className="w-28 h-28 pointer-events-none">
-            {(() => {
-              const Tag: string = 'lottie-player';
-              const props = {
-                autoplay: true,
-                loop: true,
-                mode: 'normal',
-                src: lottieVoiceSrc,
-                style: { width: '112px', height: '112px' },
-              } as React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-                autoplay?: boolean; loop?: boolean; mode?: string; src?: string; style?: React.CSSProperties;
-              };
-              return React.createElement(Tag, props);
-            })()}
+            <DotLottieReact
+              src={lottieVoiceSrc}
+              loop
+              autoplay
+            />
           </div>
         )}
       </div>

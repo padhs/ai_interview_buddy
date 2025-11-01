@@ -164,8 +164,12 @@ func VoiceTTS(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
+	// Use environment variable as fallback if voice ID not provided in request
 	if body.VoiceID == "" {
-		body.VoiceID = "Rachel"
+		body.VoiceID = strings.TrimSpace(os.Getenv("ELEVENLABS_VOICE_ID"))
+		if body.VoiceID == "" {
+			body.VoiceID = "21m00Tcm4TlvDq8ikWAM" // final fallback Rachel voice
+		}
 	}
 	if body.ModelID == "" {
 		body.ModelID = "eleven_multilingual_v2"
@@ -180,6 +184,12 @@ func VoiceTTS(w http.ResponseWriter, r *http.Request) {
 	payload, _ := json.Marshal(map[string]any{
 		"text":     body.Text,
 		"model_id": body.ModelID,
+		"voice_settings": map[string]interface{}{
+			"stability":         0.4,
+			"similarity_boost":  0.8,
+			"style":             0.5,
+			"use_speaker_boost": true,
+		},
 	})
 	req, _ := http.NewRequest("POST", url, bytes.NewReader(payload))
 	req.Header.Set("xi-api-key", apiKey)
@@ -324,18 +334,27 @@ func callGeminiWithAudio(ctx context.Context, audioBytes []byte, mimeType string
 // synthesizeSpeechToBytes calls ElevenLabs TTS and returns MP3 bytes
 func synthesizeSpeechToBytes(ctx context.Context, text string) ([]byte, error) {
 	apiKey := os.Getenv("ELEVENLABS_API_KEY")
-	voiceID := os.Getenv("ELEVENLABS_VOICE_ID")
+	voiceID := strings.TrimSpace(os.Getenv("ELEVENLABS_VOICE_ID"))
 	if voiceID == "" {
-		voiceID = "Rachel" // default
+		voiceID = "Eric" // default
 	}
 
 	if apiKey == "" {
 		return nil, errors.New("missing ELEVENLABS_API_KEY")
 	}
 
+	// Log voice ID being used for debugging (remove in production if needed)
+	// fmt.Printf("[DEBUG] Using ElevenLabs voice ID: %s\n", voiceID)
+
 	payload := map[string]any{
 		"text":     text,
 		"model_id": "eleven_multilingual_v2",
+		"voice_settings": map[string]interface{}{
+			"stability":         0.4,
+			"similarity_boost":  0.8,
+			"style":             0.5,
+			"use_speaker_boost": true,
+		},
 	}
 	jsonBody, _ := json.Marshal(payload)
 
@@ -354,7 +373,7 @@ func synthesizeSpeechToBytes(ctx context.Context, text string) ([]byte, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("tts_failed: %d %s", resp.StatusCode, string(b))
+		return nil, fmt.Errorf("tts_failed: %d - voice_id used: '%s' - %s", resp.StatusCode, voiceID, string(b))
 	}
 
 	return io.ReadAll(resp.Body)
