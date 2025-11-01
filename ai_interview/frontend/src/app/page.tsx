@@ -20,7 +20,13 @@ export default function Home() {
       }
       const data = await res.json();
       const interviewId: string = data.interviewId;
-      setSession({ sessionId: interviewId, expiresAt: Date.now() + 60 * 60 * 1000, runCount: 0 });
+      // Backend returns expiresAt as RFC3339 string; parse it to timestamp
+      const expiresAt = data.expiresAt ? new Date(data.expiresAt).getTime() : Date.now() + 60 * 60 * 1000;
+      setSession({ sessionId: interviewId, expiresAt, runCount: 0 });
+      // Mark that we're navigating normally (not a reload)
+      try {
+        sessionStorage.setItem('aiib_navigating_to_interview', 'true');
+      } catch {}
       // Preload a random problem as requested
       const pre = await fetch(`/api/v1/problems/random`);
       if (!pre.ok) console.warn('Preload problem failed', pre.status);

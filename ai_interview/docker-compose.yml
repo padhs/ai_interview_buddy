@@ -13,11 +13,12 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - /app/.next  # Anonymous volume for .next to prevent bind mount overwriting build artifacts
     environment:
       - NODE_ENV=development
       # Point Next.js proxy to the backend service when running in Docker
       - NEXT_PUBLIC_BACKEND_ORIGIN=http://ai_interview_backend:8080
-    command: npm run dev
+    command: npm run dev -- -H 0.0.0.0
     depends_on:
       - db
       - backend

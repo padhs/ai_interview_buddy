@@ -62,12 +62,10 @@ export default function SessionProvider({ children }: { children: React.ReactNod
   }), [session, clientKey]);
 
   // Guard routes: if expired and not on welcome, push to /
+  // Only redirect if session exists and is expired (not if session is null during initial load)
   useEffect(() => {
-    if (!session || session.expiresAt <= Date.now()) {
-      // only push if user is not already on /
-      // best-effort; Next App Router lacks pathname without usePathname
-      // keep it simple: push to root when session invalid and component mounted
-      // Consumers on / will ignore
+    if (session && session.expiresAt <= Date.now()) {
+      // Session expired - redirect to welcome page
       router.push('/');
     }
   }, [session, router]);

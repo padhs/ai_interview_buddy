@@ -23,7 +23,26 @@ export function useVisionObserve({
     const root = document.querySelector(rootSelector) as HTMLElement | null;
     if (!root) return;
 
-    const canvas = await html2canvas(root, {useCORS:true, scale:1});
+    const canvas = await html2canvas(root, {
+      useCORS: true,
+      scale: 1,
+      backgroundColor: '#ffffff',
+      logging: false,
+      onclone: (clonedDoc) => {
+        // Replace unsupported oklch() colors with compatible hex colors
+        try {
+          const allElements = clonedDoc.querySelectorAll('*');
+          allElements.forEach((el) => {
+            const htmlEl = el as HTMLElement;
+            if (htmlEl.style && htmlEl.style.cssText) {
+              htmlEl.style.cssText = htmlEl.style.cssText.replace(/oklch\([^)]+\)/g, '#9ca3af');
+            }
+          });
+        } catch {
+          // Ignore errors during clone processing
+        }
+      },
+    });
     const dataUrl = canvas.toDataURL("image/webp", 0.8);
     const data = dataUrl.split(",")[1];
 

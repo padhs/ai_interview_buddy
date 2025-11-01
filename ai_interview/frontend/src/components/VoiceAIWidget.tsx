@@ -80,7 +80,44 @@ export default function VoiceAIWidget({ problemId = 0, language = '', lastRunSta
             const editorElement = (document.querySelector('.monaco-editor')?.parentElement?.parentElement as HTMLElement) || 
                                   (document.querySelector('#interview-root') as HTMLElement);
             if (editorElement) {
-              const canvas = await html2canvas(editorElement, { useCORS: true, scale: 0.5 });
+              const canvas = await html2canvas(editorElement, {
+                useCORS: true,
+                scale: 0.5,
+                backgroundColor: '#ffffff',
+                logging: false,
+                onclone: (clonedDoc) => {
+                  // Replace unsupported oklch() colors with compatible rgb/rgba
+                  const styleSheets = clonedDoc.styleSheets;
+                  try {
+                    for (let i = 0; i < styleSheets.length; i++) {
+                      const sheet = styleSheets[i] as CSSStyleSheet;
+                      try {
+                        const rules = sheet.cssRules || sheet.rules;
+                        if (rules) {
+                          for (let j = 0; j < rules.length; j++) {
+                            const rule = rules[j] as CSSStyleRule;
+                            if (rule.style && rule.style.cssText) {
+                              rule.style.cssText = rule.style.cssText.replace(/oklch\([^)]+\)/g, '#9ca3af');
+                            }
+                          }
+                        }
+                      } catch {
+                        // CORS or other sheet access issues - ignore
+                      }
+                    }
+                  } catch {
+                    // Ignore stylesheet access errors
+                  }
+                  // Also replace in inline styles
+                  const allElements = clonedDoc.querySelectorAll('*');
+                  allElements.forEach((el) => {
+                    const htmlEl = el as HTMLElement;
+                    if (htmlEl.style && htmlEl.style.cssText) {
+                      htmlEl.style.cssText = htmlEl.style.cssText.replace(/oklch\([^)]+\)/g, '#9ca3af');
+                    }
+                  });
+                },
+              });
               screenshotBase64 = canvas.toDataURL('image/webp', 0.8).split(',')[1];
             }
           } catch (err) {

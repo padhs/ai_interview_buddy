@@ -124,11 +124,14 @@ func callGeminiInterviewer(
 }
 
 func synthesizeSpeech(ctx context.Context, text string) (string, error) {
-	apiKeyAudio := os.Getenv("GEMINI_API_KEY_AUDIO")
-	voiceID := os.Getenv("GEMINI_VOICE_ID")
+	apiKey := os.Getenv("ELEVENLABS_API_KEY")
+	voiceID := os.Getenv("ELEVENLABS_VOICE_ID")
+	if voiceID == "" {
+		voiceID = "Eric" // default
+	}
 
-	if apiKeyAudio == "" || voiceID == "" {
-		return "", errors.New("missing GEMINI_API_KEY_AUDIO or GEMINI_VOICE_ID")
+	if apiKey == "" {
+		return "", errors.New("missing ELEVENLABS_API_KEY")
 	}
 
 	body := map[string]interface{}{
@@ -144,9 +147,10 @@ func synthesizeSpeech(ctx context.Context, text string) (string, error) {
 	jsonBody, _ := json.Marshal(body)
 
 	req, _ := http.NewRequestWithContext(ctx, "POST",
-		"https://api.elevenlabs.io/v1/text-to-speech/"+voiceID, bytes.NewBuffer(jsonBody))
+		"https://api.elevenlabs.io/v1/text-to-speech/"+voiceID+"/stream", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("xi-api-key", apiKeyAudio)
+	req.Header.Set("xi-api-key", apiKey)
+	req.Header.Set("accept", "audio/mpeg")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

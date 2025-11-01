@@ -63,7 +63,26 @@ export default function InterviewPage() {
           const root = document.querySelector('#interview-root');
           if (!root) return;
           
-          const canvas = await html2canvas(root as HTMLElement, { useCORS: true, scale: 0.5 });
+          const canvas = await html2canvas(root as HTMLElement, {
+            useCORS: true,
+            scale: 0.5,
+            backgroundColor: '#ffffff',
+            logging: false,
+            onclone: (clonedDoc) => {
+              // Replace unsupported oklch() colors with compatible rgb/rgba
+              try {
+                const allElements = clonedDoc.querySelectorAll('*');
+                allElements.forEach((el) => {
+                  const htmlEl = el as HTMLElement;
+                  if (htmlEl.style && htmlEl.style.cssText) {
+                    htmlEl.style.cssText = htmlEl.style.cssText.replace(/oklch\([^)]+\)/g, '#9ca3af');
+                  }
+                });
+              } catch {
+                // Ignore errors during clone processing
+              }
+            },
+          });
           const screenshotBase64 = canvas.toDataURL('image/webp', 0.8).split(',')[1];
           
           const context = {
@@ -114,15 +133,33 @@ export default function InterviewPage() {
   }, [session?.sessionId, currentProblemId, currentLanguage, codeStat]);
 
   // Invalidate session on browser refresh and return to welcome page (DELETE)
+  // Track if we've navigated here normally (not via reload) using sessionStorage
+  const reloadCheckRef = useRef(false);
+  
   useEffect(() => {
+    if (!session?.sessionId) return;
+    
+    // Check if this is a normal navigation (we set a flag when navigating from home page)
+    const isNormalNavigation = sessionStorage.getItem('aiib_navigating_to_interview') === 'true';
+    
+    if (isNormalNavigation) {
+      // Clear the flag since we've successfully navigated
+      sessionStorage.removeItem('aiib_navigating_to_interview');
+      reloadCheckRef.current = true;
+      return;
+    }
+    
+    // If we haven't marked this as normal navigation, check if it's a reload
+    if (reloadCheckRef.current) return;
+    reloadCheckRef.current = true;
+    
     try {
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-      const isReload = !!nav && (nav as PerformanceNavigationTiming).type === 'reload';
-      if (isReload && session?.sessionId) {
+      // Only trigger on actual browser reload (F5/Ctrl+R), not normal navigation
+      const navType = nav ? (nav as PerformanceNavigationTiming).type : null;
+      if (navType === 'reload') {
         fetch(`/api/v1/interviews/${session.sessionId}`, { method: 'DELETE' }).finally(() => {
-          // Clear local session and local UI state
           resetSession();
-          // navigate to root
           router.push('/');
         });
       }
@@ -251,75 +288,109 @@ export default function InterviewPage() {
           runLabel={runLabel}
           showFinish={runCount < 2}
         />
-        <div className="absolute top-2 right-4">
-          <button disabled={!hasResult} onClick={() => setHasResult(true)} className="px-3 py-1.5 rounded border bg-white disabled:opacity-50">Result</button>
-        </div>
+        {/* Code Stats Panel - positioned near language selector, top right */}
         {hasResult && codeStat && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl">
-              <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-5 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-200">Run #{(session?.runCount ?? 0)}</span>
-                  <h3 className="text-sm font-semibold tracking-wide">Execution Result</h3>
+          <div className="absolute top-16 right-4 w-96 max-w-[calc(50%-2rem)] z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-300 dark:border-gray-600 shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-700/50 text-blue-100">Run #{(session?.runCount ?? 0)}</span>
+                  <h3 className="text-sm font-semibold">Execution Result</h3>
                 </div>
-                <button onClick={() => setHasResult(false)} className="text-gray-300 hover:text-white transition-colors" aria-label="Close">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <button 
+                  onClick={() => setHasResult(false)} 
+                  className="text-blue-100 hover:text-white transition-colors p-1 rounded hover:bg-blue-700/50" 
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
                 </button>
               </div>
-              <div className="bg-white dark:bg-gray-900 px-5 py-4 max-h-[70vh] overflow-auto">
-                <div className="flex items-center gap-3 mb-4">
+              
+              {/* Content */}
+              <div className="bg-white dark:bg-gray-800 px-4 py-3 max-h-[60vh] overflow-auto">
+                <div className="flex items-center gap-3 mb-3">
                   {(() => {
                     const desc = codeStat?.status?.description || '-';
                     const badgeClass = desc.toLowerCase().includes('accepted') || desc.toLowerCase().includes('ok')
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700'
                       : desc.toLowerCase().includes('time') || desc.toLowerCase().includes('memory')
-                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
                       : desc.toLowerCase().includes('compil') || desc.toLowerCase().includes('error')
-                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200'
-                      : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200 border border-rose-300 dark:border-rose-700'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600';
                     return (
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}`}>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${badgeClass}`}>
                         {desc}
                       </span>
                     );
                   })()}
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
-                    <span className="mr-4"><span className="font-medium">Time:</span> {codeStat?.time || '-'}</span>
-                    <span><span className="font-medium">Memory:</span> {codeStat?.memory ?? '-'}</span>
+                </div>
+                
+                <div className="flex items-center gap-4 mb-3 text-xs">
+                  <div className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Time:</span>
+                    <span className="font-mono">{codeStat?.time || '-'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Memory:</span>
+                    <span className="font-mono">{codeStat?.memory ?? '-'} KB</span>
                   </div>
                 </div>
 
                 {codeStat?.compile_output && (
-                  <div className="mb-4">
-                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Compiler Output</div>
-                    <pre className="text-xs bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg p-3 overflow-auto whitespace-pre-wrap font-mono">
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1.5">Compiler Output</div>
+                    <pre className="text-xs bg-gray-100 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-700 rounded-md p-2.5 overflow-auto whitespace-pre-wrap font-mono text-gray-800 dark:text-gray-200">
                       {codeStat.compile_output}
                     </pre>
                   </div>
                 )}
 
                 {codeStat?.stdout && (
-                  <div className="mb-4">
-                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Stdout</div>
-                    <pre className="text-xs bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg p-3 overflow-auto whitespace-pre-wrap font-mono">
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1.5">Output</div>
+                    <pre className="text-xs bg-gray-100 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-700 rounded-md p-2.5 overflow-auto whitespace-pre-wrap font-mono text-gray-800 dark:text-gray-200">
                       {codeStat.stdout}
                     </pre>
                   </div>
                 )}
 
                 {codeStat?.stderr && (
-                  <div className="mb-2">
-                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Stderr</div>
-                    <pre className="text-xs bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg p-3 overflow-auto whitespace-pre-wrap font-mono text-rose-700 dark:text-rose-300">
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-rose-700 dark:text-rose-400 mb-1.5">Errors</div>
+                    <pre className="text-xs bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-md p-2.5 overflow-auto whitespace-pre-wrap font-mono text-rose-800 dark:text-rose-200">
                       {codeStat.stderr}
                     </pre>
                   </div>
                 )}
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900/70 px-5 py-3 flex items-center justify-end gap-3">
-                <button onClick={() => setHasResult(false)} className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">Close</button>
+              
+              {/* Footer */}
+              <div className="bg-gray-50 dark:bg-gray-900/70 px-4 py-2.5 flex items-center justify-end border-t border-gray-200 dark:border-gray-700">
+                <button 
+                  onClick={() => setHasResult(false)} 
+                  className="px-4 py-1.5 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </div>
+          </div>
+        )}
+        
+        {/* Result button - show when there's a result */}
+        {hasResult && !codeStat && (
+          <div className="absolute top-16 right-4 z-40">
+            <button 
+              onClick={() => setHasResult(true)} 
+              className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-lg"
+            >
+              View Result
+            </button>
           </div>
         )}
       </div>
